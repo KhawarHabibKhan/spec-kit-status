@@ -67,6 +67,14 @@ detected_agents=""
 for i in "${!AGENT_KEYS[@]}"; do
     folder="${AGENT_FOLDERS[$i]}"
     agent_dir="$REPO_ROOT/$folder"
+    if [ "${AGENT_KEYS[$i]}" = "amp" ] && [ -f "$REPO_ROOT/.agents/skills/speckit-specify/SKILL.md" ]; then
+        continue
+    fi
+    if [ "${AGENT_KEYS[$i]}" = "codex" ] && [ -f "$REPO_ROOT/.agents/skills/speckit-specify/SKILL.md" ]; then
+        folder=".agents"
+        agent_dir="$REPO_ROOT/$folder"
+        AGENT_CMD_DIRS[$i]="skills"
+    fi
     if [ -d "$agent_dir" ]; then
         cmd_dir="$agent_dir/${AGENT_CMD_DIRS[$i]}"
         has_commands=false
@@ -109,58 +117,46 @@ CURRENT_BRANCH=""
 FEATURE_DIR=""
 SPECS_DIR="$REPO_ROOT/specs"
 
-# 1. Check SPECIFY_FEATURE env var
-if [ -n "${SPECIFY_FEATURE:-}" ]; then
-    CURRENT_BRANCH="$SPECIFY_FEATURE"
+# Keep the Git branch separate from the selected feature. Current Spec Kit
+# resolves a directory override or persisted feature pointer, even on main.
+if [ "$HAS_GIT" = true ]; then
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || true)
 fi
-
-# 2. Try git
-if [ -z "$CURRENT_BRANCH" ] && [ "$HAS_GIT" = true ]; then
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-fi
-
-# 3. Fallback: scan specs/ for highest-numbered dir
-if [ -z "$CURRENT_BRANCH" ] || [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
-    if [ -d "$SPECS_DIR" ]; then
-        highest=0
-        latest=""
-        for dir in "$SPECS_DIR"/*/; do
-            [ -d "$dir" ] || continue
-            dirname=$(basename "$dir")
-            if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
-                num=$((10#${BASH_REMATCH[1]}))
-                if [ "$num" -gt "$highest" ]; then
-                    highest=$num
-                    latest=$dirname
-                fi
-            fi
+if [ -n "${SPECIFY_FEATURE_DIRECTORY:-}" ]; then
+    FEATURE_DIR="$SPECIFY_FEATURE_DIRECTORY"
+elif [ -f "$SPECIFY_DIR/feature.json" ]; then
+    FEATURE_DIR=$(python3 -c 'import json,sys; value=json.load(open(sys.argv[1])).get("feature_directory"); assert isinstance(value,str) and value, "Missing feature_directory"; print(value)' "$SPECIFY_DIR/feature.json")
+elif [ -n "${SPECIFY_FEATURE:-}" ]; then
+    FEATURE_DIR="$SPECS_DIR/$SPECIFY_FEATURE"
+elif [[ "$CURRENT_BRANCH" =~ ^([0-9]{3})- ]]; then
+    if [ -d "$SPECS_DIR/$CURRENT_BRANCH" ]; then
+        FEATURE_DIR="$SPECS_DIR/$CURRENT_BRANCH"
+    else
+        matches=()
+        for dir in "$SPECS_DIR/${BASH_REMATCH[1]}-"*/; do
+            [ -d "$dir" ] && matches+=("$dir")
         done
-        if [ -n "$latest" ] && { [ -z "$CURRENT_BRANCH" ] || [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; }; then
-            CURRENT_BRANCH="$latest"
+        if [ ${#matches[@]} -gt 1 ]; then
+            echo 'Ambiguous feature prefix; select SPECIFY_FEATURE_DIRECTORY explicitly' >&2
+            exit 1
         fi
+        [ ${#matches[@]} -eq 0 ] || FEATURE_DIR="${matches[0]}"
     fi
 fi
-
-# --- Resolve feature directory (prefix-based) --------------------------------
-
-if [[ "$CURRENT_BRANCH" =~ ^([0-9]{3})- ]] && [ -d "$SPECS_DIR" ]; then
-    prefix="${BASH_REMATCH[1]}"
-    matches=()
-    for dir in "$SPECS_DIR"/"$prefix"-*/; do
-        [ -d "$dir" ] && matches+=("$(basename "$dir")")
-    done
-    if [ ${#matches[@]} -eq 1 ]; then
-        FEATURE_DIR="$SPECS_DIR/${matches[0]}"
-    elif [ ${#matches[@]} -gt 1 ]; then
-        if [ -d "$SPECS_DIR/$CURRENT_BRANCH" ]; then
-            FEATURE_DIR="$SPECS_DIR/$CURRENT_BRANCH"
-        else
-            FEATURE_DIR="$SPECS_DIR/${matches[0]}"
-        fi
+if [ -n "$FEATURE_DIR" ]; then
+    [[ "$FEATURE_DIR" = /* ]] || FEATURE_DIR="$REPO_ROOT/$FEATURE_DIR"
+    if [ ! -d "$FEATURE_DIR" ]; then
+        echo 'Selected feature directory does not exist' >&2
+        exit 1
     fi
+    FEATURE_DIR="$(cd "$FEATURE_DIR" && pwd -P)"
+    case "$FEATURE_DIR" in
+        "$REPO_ROOT"/specs/*) ;;
+        *) echo 'Selected feature is outside this project specs directory' >&2; exit 1 ;;
+    esac
 fi
 
-# --- Check SDD artifacts -----------------------------------------------------
+# --- Artifact checks -------------------------------------------------------
 
 has_spec=false; has_plan=false; has_tasks=false
 has_research=false; has_datamodel=false; has_quickstart=false
@@ -195,11 +191,21 @@ if [ -n "$FEATURE_DIR" ] && [ -d "$FEATURE_DIR" ]; then
 
     # Parse task progress
     if [ "$has_tasks" = true ]; then
-        while IFS= read -r line; do
-            stripped=$(echo "$line" | sed 's/^[[:space:]]*//')
-            if echo "$stripped" | grep -qE '^\-\s+\[([ xX])\]'; then
+        fence=""
+        while IFS= read -r line || [ -n "$line" ]; do
+            if [[ "$line" =~ ^[[:space:]]*(\`{3,}|~{3,}) ]]; then
+                marker="${BASH_REMATCH[1]}"
+                if [ -z "$fence" ]; then
+                    fence="$marker"
+                elif [ "${marker:0:1}" = "${fence:0:1}" ] && [ ${#marker} -ge ${#fence} ]; then
+                    fence=""
+                fi
+                continue
+            fi
+            [ -z "$fence" ] || continue
+            if [[ "$line" =~ ^[[:space:]]*[-*+][[:space:]]+\[([[:space:]xX])\] ]]; then
                 tasks_total=$((tasks_total + 1))
-                if echo "$stripped" | grep -qE '^\-\s+\[[xX]\]'; then
+                if [[ "${BASH_REMATCH[1]}" =~ [xX] ]]; then
                     tasks_completed=$((tasks_completed + 1))
                 fi
             fi
