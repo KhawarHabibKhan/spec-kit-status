@@ -1,0 +1,128 @@
+[
+  {
+    "key": "copilot",
+    "name": "GitHub Copilot",
+    "folder": ".github",
+    "commands": "agents"
+  },
+  {
+    "key": "claude",
+    "name": "Claude Code",
+    "folder": ".claude",
+    "commands": "commands"
+  },
+  {
+    "key": "gemini",
+    "name": "Gemini CLI",
+    "folder": ".gemini",
+    "commands": "commands"
+  },
+  {
+    "key": "cursor-agent",
+    "name": "Cursor",
+    "folder": ".cursor",
+    "commands": "commands"
+  },
+  {
+    "key": "qwen",
+    "name": "Qwen Code",
+    "folder": ".qwen",
+    "commands": "commands"
+  },
+  {
+    "key": "opencode",
+    "name": "opencode",
+    "folder": ".opencode",
+    "commands": "command"
+  },
+  {
+    "key": "codex",
+    "name": "Codex CLI",
+    "folder": ".codex",
+    "commands": "prompts"
+  },
+  {
+    "key": "windsurf",
+    "name": "Windsurf",
+    "folder": ".windsurf",
+    "commands": "workflows"
+  },
+  {
+    "key": "kilocode",
+    "name": "Kilo Code",
+    "folder": ".kilocode",
+    "commands": "workflows"
+  },
+  {
+    "key": "auggie",
+    "name": "Auggie CLI",
+    "folder": ".augment",
+    "commands": "commands"
+  },
+  {
+    "key": "codebuddy",
+    "name": "CodeBuddy",
+    "folder": ".codebuddy",
+    "commands": "commands"
+  },
+  {
+    "key": "qodercli",
+    "name": "Qoder CLI",
+    "folder": ".qoder",
+    "commands": "commands"
+  },
+  {
+    "key": "roo",
+    "name": "Roo Code",
+    "folder": ".roo",
+    "commands": "commands"
+  },
+  {
+    "key": "kiro-cli",
+    "name": "Kiro CLI",
+    "folder": ".kiro",
+    "commands": "prompts"
+  },
+  {
+    "key": "amp",
+    "name": "Amp",
+    "folder": ".agents",
+    "commands": "commands"
+  },
+  {
+    "key": "shai",
+    "name": "SHAI",
+    "folder": ".shai",
+    "commands": "commands"
+  },
+  {
+    "key": "tabnine",
+    "name": "Tabnine CLI",
+    "folder": ".tabnine/agent",
+    "commands": "commands"
+  },
+  {
+    "key": "agy",
+    "name": "Antigravity",
+    "folder": ".agent",
+    "commands": "workflows"
+  },
+  {
+    "key": "bob",
+    "name": "IBM Bob",
+    "folder": ".bob",
+    "commands": "commands"
+  },
+  {
+    "key": "vibe",
+    "name": "Mistral Vibe",
+    "folder": ".vibe",
+    "commands": "prompts"
+  },
+  {
+    "key": "kimi",
+    "name": "Kimi Code",
+    "folder": ".kimi",
+    "commands": "skills"
+  }
+]

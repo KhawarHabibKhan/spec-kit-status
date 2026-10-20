@@ -3,12 +3,12 @@ schema_version: "1.0"
 extension:
   id: "status"
   name: "Project Status"
-  version: "1.0.0"
+  version: "1.0.1"
   description: "Show current SDD workflow progress — active feature, artifact status, task completion, workflow phase, and extensions summary."
   author: "KhawarHabibKhan"
-  repository: "https://github.com/KhawarHabibKhan/spec-kit-status"
+  repository: "https://github.com/3pepe3/spec-kit-status"
   license: "MIT"
-  homepage: "https://github.com/KhawarHabibKhan/spec-kit-status"
+  homepage: "https://github.com/3pepe3/spec-kit-status"
 
 requires:
   speckit_version: ">=0.1.0"

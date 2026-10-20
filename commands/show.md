@@ -1,5 +1,5 @@
 ---
-description: "Show project status and SDD workflow progress — active feature, artifacts, task completion, phase, and extensions."
+description: "Show local project artifacts and task bookkeeping; acceptance and live status are not assessed."
 scripts:
   sh: scripts/bash/status.sh
   ps: scripts/powershell/status.ps1
@@ -7,7 +7,8 @@ scripts:
 
 # Project Status
 
-Show a unified overview of the current Spec Kit project state and SDD workflow progress.
+Show a read-only overview of local Spec Kit artifacts. Task checkboxes are
+bookkeeping, not evidence of engineering acceptance or permission to implement.
 
 ## User Input
 
@@ -15,43 +16,41 @@ Show a unified overview of the current Spec Kit project state and SDD workflow p
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+Consider nonempty input as a feature selector, such as `003` or `003-media`.
+Append `--feature "003"` to the Bash script command or `-Feature "003"` to the
+PowerShell script command, replacing `003` with the supplied selector as one
+quoted argument. With no input, append no feature flag; the script resolves the
+native feature context, then legacy environment/branch context, or returns the all-feature summary.
+Do not interpolate user input as shell code.
 
 ## Outline
 
-1. **Run status script**: Execute `{SCRIPT}` from the project root and parse the JSON output.
+1. Execute `{SCRIPT}` from the project root. Parse its single JSON document;
+   on a nonzero exit, present the JSON error rather than inferring a feature.
+2. Present project name, detected agents and commands/skills, script type,
+   Git branch, and selected `feature_name` (under `specs/`).
+3. Explain selection: explicit argument overrides `SPECIFY_FEATURE_DIRECTORY`,
+   then `.specify/feature.json`, then legacy `SPECIFY_FEATURE` and a numbered
+   `NNN-...` Git branch. Native directories must be safe numbered children of
+   `specs/`. Legacy selectors use the exact directory or a unique three-digit
+   prefix. Missing, unsafe or ambiguous selections fail. With no context, return
+   `phase: no_feature` and the all-feature summary; never choose the latest.
+4. Show artifact existence for spec, plan, tasks, research, data model,
+   quickstart, contracts and checklists. Checklist status is only checkbox
+   bookkeeping. Fenced Markdown examples do not count.
+5. Show checked/total tasks and the reported local phase:
+   - `not_started`: no specification.
+   - `plan`: specification exists, plan absent.
+   - `tasks`: plan exists, task file absent.
+   - `no_tasks`: task file exists without actionable checkboxes.
+   - `implement`: at least one task remains unchecked; verify authorization.
+   - `tasks_checked`: all task checkboxes checked; acceptance remains unassessed.
+6. Retain the `features` list and aggregate `summary` even when a feature is
+   selected. Show installed extension count, or unknown for `null`.
+7. Always disclose `acceptance: NOT_ASSESSED` and `live_status: NOT_QUERIED`.
+   Do not translate checked tasks into product completion, release readiness,
+   kickoff authorization or live GitHub status.
 
-2. **Present project information**:
-   - **Project name** — current directory name
-   - **AI agent(s)** — which agent folders are detected, whether commands are present
-   - **Script type** — bash, PowerShell, or both
-   - **Git branch** — current branch name (or SPECIFY_FEATURE env var fallback)
-   - **Feature directory** — resolved specs/NNN-name/ path
-
-3. **Show SDD artifact status** for the current feature:
-   - Check existence of: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `quickstart.md`
-   - Check `contracts/` directory (show file count if present)
-   - Check `checklists/` directory (show count and pass/fail status)
-   - Mark each with ✓ (exists) or ✗ (missing)
-
-4. **Parse task progress** (if `tasks.md` exists):
-   - Count lines matching `- [X]` or `- [x]` as completed
-   - Count lines matching `- [ ]` as incomplete
-   - Show: "12/18 completed (67%)"
-
-5. **Detect workflow phase** based on which artifacts exist:
-   - No spec.md → **Not Started** (run /speckit.specify)
-   - spec.md only → **Plan** (ready for /speckit.clarify or /speckit.plan)
-   - plan.md exists → **Tasks** (ready for /speckit.tasks)
-   - tasks.md exists, not all done → **Implement** (ready for /speckit.implement)
-   - All tasks [X] → **Complete**
-
-6. **Show extensions summary**:
-   - Count installed extensions from `.specify/extensions/` registry
-   - Note: available catalog count is not shown (run `specify extension search` for that)
-
-7. **Handle edge cases**:
-   - On main/master branch with no feature → show project info + hint to switch branches
-   - No git available → use SPECIFY_FEATURE env var or scan specs/ for latest feature
-   - No features exist → show "No features created yet"
-   - No .specify/ directory → script exits with error
+`SPECIFY_INIT_DIR` selects the project root. Do not write or repair project state
+during status checks. Both wrappers require Python3 and accept `--json` / `-Json`
+for compatibility.
